@@ -1,0 +1,54 @@
+  今天在一个Visual C++项目上见了鬼。
+  双击SLN文件，VS弹了个窗，好吓人：
+---------------------------
+Microsoft Visual Studio
+---------------------------
+文件加载
+
+使用 简体中文(GB2312) 编码加载文件 E:\Workplace\Project\研究项目\Legacy Desktop\API样例\cpp\AmbientLightAware.h 时，有些字节已用 Unicode 替换字符替换。保存该文件将不会保留原始文件内容。
+---------------------------
+确定   
+---------------------------
+  关闭弹窗，看了一下代码，的确有点不一样。代码作于VS 2005，开篇点题：
+//-----------------------------------------------------------------------------
+// THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
+// ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+// THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+// PARTICULAR PURPOSE.
+//
+// Copyright ?Microsoft Corporation.  All rights reserved.
+//
+// Module:
+//        AmbientLightAware.cpp
+//
+// Description:
+//        Dialog for Ambient Light Aware SDK Sample
+//
+// Comments: 
+//        Standard vc++ dialog created by VS 2005 wizard.
+//        This code just creates a dialog and cleans it up when finished.
+//
+//-----------------------------------------------------------------------------
+  然后我就发现这个Microsoft与众不同：别人是©、(C)、&C什么的，这标居然还有“?”版？
+  ……
+  一番搜索表明，问号的祖上很红很专，西班牙（Es）对此有重大贡献，Question在拉丁语（La）的本家进行了重大字形演变简化后的产品，大写的Q是其主要原型，Que-
+stion的词义赋予了其意义……总之和Copyright还是left没关系。对了一下二进制，发现是a9，查了查，©在Unicode和泛ANSI（256版的ASCII）下的编码都是这个，然后
+就不好办了：
+  文件是什么编码？
+  这着实不好回答，NotePad++显示是ASCII，但这问号就表明这不在真·ASCII表范围内，所以找了个问号扛着，但是虽然有Unicode码，不过一是当时的时间点Unicode
+普及不那么广泛二就是Unicode也没有直接对应单字节的编码啊。那是UTF-8？BOM和“纯正”版都会产生一个显示为“黑框xa9”然后二进制是不存在编码的东西。想了一下，
+决定试试另一条路。
+  这条路并不更好走，泛ANSI，这帽子大了去了，只要兼容ASCII-128版，都是圈里的，看了半天，发现ISO-8859-1（Latin-1）是源头。那就试试吧，打开后，以Lat-
+in-1显示，哦？“圈C”出来了，那就再转成UTF-8-BOM（VS用，有传闻无BOM编译会BOMB，暂未考证），嗯~，稳如狗，看来可行。好奇之下，我又看了一下当前的二进制，
+嗯？！！c2 a9？？？何方神圣？找了一圈百度，彩票比特币不绝于耳，换国际搜索工具，还是没头绪，想了一想，把“圈C”的HTML编码作为关键词，找到了几个字符查询
+网站，给出了答案：
+HTML Entity (decimal)	&#169;
+HTML Entity (hex)	&#xa9;
+HTML Entity (named)	&copy;
+UTF-8 (hex)	0xC2 0xA9 (c2a9)
+UTF-16 (hex)	0x00A9 (00a9)
+UTF-16 (decimal)	169
+UTF-32 (hex)	0x000000A9 (a9)
+UTF-32 (decimal)	169
+C/C++/Java source code	"\u00A9"
+  还是学识不够，背得好好的UTF-8编码规则硬是光看到多了个c2，不过问题总算是清晰了，不由得让人想起Unix上著名的“所见即所得”（概）理念就是省心。
